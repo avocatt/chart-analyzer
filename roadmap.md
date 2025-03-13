@@ -6,8 +6,8 @@ This roadmap outlines the development plan for a statistical analyzer that exami
 ## Phase 1: Project Setup and Data Preparation
 - [x] **1.1 Project Structure Setup**
   - [x] Create directory structure
-  - [ ] Initialize git repository
-  - [ ] Set up virtual environment
+  - [x] Initialize git repository
+  - [x] Set up virtual environment
   - [x] Create README.md with project overview
 
 - [x] **1.2 Data Validation and Cleaning**
