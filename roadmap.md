@@ -19,7 +19,7 @@ This roadmap outlines the development plan for a statistical analyzer that exami
   - [x] Create data_loader.py for consistent data loading
   - [x] Implement functions to merge/align daily and minute data
   - [x] Add utility functions for datetime handling
-  - [ ] Create unit tests for data processing functions
+  - [x] Create unit tests for data processing functions
 
 ## Phase 2: Core Analysis Engine
 - [x] **2.1 Break Detection Module**
