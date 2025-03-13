@@ -1,0 +1,89 @@
+# Bitcoin Mean Reversion Statistical Analyzer - Cursor Rules
+
+# Project Structure
+- Follow the established directory structure
+- Place all core analysis code in src/ directory
+- Place all tests in tests/ directory
+- Place visualization code in visualization/ directory
+- Store configuration in config/ directory
+
+# Python Coding Standards
+- Follow PEP 8 style guidelines
+- Use 4 spaces for indentation (no tabs)
+- Maximum line length of 100 characters
+- Use snake_case for variables and functions
+- Use CamelCase for classes
+- Use UPPER_CASE for constants
+
+# Docstrings and Comments
+- Every function, class, and method must have a docstring
+- Use Google-style docstrings
+- Example:
+```python
+def function_name(param1, param2):
+    """Short description of function.
+    
+    Longer description explaining details.
+    
+    Args:
+        param1: Description of param1
+        param2: Description of param2
+        
+    Returns:
+        Description of return value
+        
+    Raises:
+        ExceptionType: When and why this exception is raised
+    """
+    # Implementation
+```
+- Comments should explain "why", not "what"
+- Keep comments up-to-date with code changes
+
+# Error Handling
+- Use explicit exception handling with specific exception types
+- Include meaningful error messages
+- Log exceptions appropriately
+- Validate user inputs and data before processing
+
+# Testing
+- Write unit tests for all non-trivial functions
+- Aim for at least 80% code coverage
+- Test edge cases and error conditions
+- Use pytest for testing
+
+# Data Handling
+- Use pandas for all data manipulation
+- Handle NaN values explicitly
+- Document assumptions about data format
+- Implement data validation for inputs
+
+# Performance Considerations
+- Profile code before optimization
+- Use vectorized operations when possible
+- Be mindful of memory usage with large datasets
+- Document performance characteristics
+
+# Visualization Standards
+- All plots must have proper titles, labels, and legends
+- Use a consistent color scheme
+- Include source data information in captions
+- Support both interactive and static visualization formats
+
+# Git Practices
+- Write meaningful commit messages
+- Use feature branches for development
+- Keep commits focused on single tasks
+- Don't commit large data files to repository
+
+# Configuration Management
+- Store configuration parameters in dedicated config files
+- Don't hardcode parameters in analysis code
+- Document all configuration options
+- Provide sensible defaults
+
+# Documentation
+- Keep README.md up-to-date
+- Document all public functions and classes
+- Include examples in documentation
+- Explain methodologies used in analysis 

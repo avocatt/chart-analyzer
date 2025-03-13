@@ -1,0 +1,46 @@
+# Bitcoin Mean Reversion Statistical Analyzer Configuration
+
+# Data paths (relative to project root)
+data:
+  minute_data: "data/BTCUSDT_1m.csv"
+  daily_data: "data/BTCUSDT_1d.csv"
+
+# Break detection parameters
+break_detection:
+  # Minimum percentage beyond level to confirm a break
+  confirmation_threshold: 0.1
+  
+  # Maximum time to look for first break each day (in hours from day start)
+  # Set to 24 to look throughout the whole day
+  max_hours_from_day_start: 24
+
+# Analysis parameters
+analysis:
+  # Minimum percentage move in break direction to count as continuation
+  continuation_threshold: 1.0
+  
+  # Minimum percentage move against break direction to count as reversal
+  reversal_threshold: 0.5
+  
+  # Hours to analyze price action after a break
+  window_hours: 24
+  
+  # Whether to use UTC or local time for day boundaries
+  use_utc: true
+
+# Reporting parameters
+reporting:
+  # Generate charts for individual breaks
+  individual_break_charts: false
+  
+  # Generate aggregated statistics
+  aggregate_stats: true
+  
+  # Generate time-of-day analysis
+  time_of_day_analysis: true
+  
+  # Generate day-of-week analysis
+  day_of_week_analysis: true
+  
+  # Save results to CSV
+  save_csv: true 
