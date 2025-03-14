@@ -154,7 +154,7 @@ def parse_arguments():
     )
     
     parser.add_argument(
-        '--window-hours',
+        '--window-hours-list',
         type=int,
         nargs='+',
         default=[4, 8, 12, 24],
@@ -202,7 +202,7 @@ def main():
             confirmation_thresholds=args.confirmation_thresholds,
             continuation_thresholds=args.continuation_thresholds,
             reversal_thresholds=args.reversal_thresholds,
-            window_hours=args.window_hours,
+            window_hours=args.window_hours_list,
             start_date=args.start_date,
             end_date=args.end_date
         )
