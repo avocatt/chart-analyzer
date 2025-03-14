@@ -44,20 +44,12 @@ This roadmap outlines the development plan for a statistical analyzer that exami
 - [x] **3.1 Time-Based Analysis**
   - [x] Add time-of-day analysis for breaks
   - [x] Implement day-of-week analysis
-  - [ ] Create functions for session-based analysis (Asia, Europe, US)
-  - [ ] Analyze holiday vs. normal day behavior
 
 - [ ] **3.2 Market Context Analysis**
   - [ ] Add volatility measurement around breaks
   - [ ] Implement volume analysis pre/post break
   - [ ] Create market regime detection (trending vs. ranging)
   - [ ] Analyze behavior during major market events
-
-- [ ] **3.3 Sequential Pattern Analysis**
-  - [ ] Track sequences of breaks (multiple in same day)
-  - [ ] Analyze behavior after consecutive day breaks
-  - [ ] Implement pattern recognition for common setups
-  - [ ] Create metrics for streak analysis
 
 ## Phase 4: Visualization and Reporting
 - [x] **4.1 Charting Module**
@@ -80,7 +72,7 @@ This roadmap outlines the development plan for a statistical analyzer that exami
 
 ## Phase 5: Parameter Optimization and Validation
 - [ ] **5.1 Parameter Testing Framework**
-  - [ ] Create grid search for optimal parameters
+  - [x] Create grid search for optimal parameters
   - [ ] Implement cross-validation to prevent overfitting
   - [ ] Add sensitivity analysis for key parameters
   - [ ] Create reporting for parameter testing results
