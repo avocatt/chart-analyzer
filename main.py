@@ -9,6 +9,7 @@ import os
 import sys
 import logging
 from datetime import datetime
+from pathlib import Path # Add this import
 
 # Add project root to path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -120,7 +121,13 @@ def parse_arguments():
         action='store_true',
         help='Run parameter optimization'
     )
-    
+
+    parser.add_argument(
+        '--analyze',
+        action='store_true',
+        help='Run analysis. This is the default action if --optimize is not specified.'
+    )
+
     parser.add_argument(
         '--metric',
         type=str,
@@ -180,7 +187,7 @@ def main():
     # Create timestamp for output files
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # Process output path
+    # Process output path for analysis report
     output_path = args.output.replace('{timestamp}', timestamp)
     
     # Create analyzer
@@ -190,6 +197,8 @@ def main():
         config_path=args.config
     )
     
+    results_df_for_analysis_output = None # Will hold DF for report, CSV, charts, summary
+    
     # If optimization is requested, run parameter optimization
     if args.optimize:
         logger.info("Running parameter optimization")
@@ -198,7 +207,7 @@ def main():
         optimizer = ParameterOptimizer(analyzer, evaluation_metric=args.metric)
         
         # Run grid search
-        results = optimizer.grid_search(
+        opt_results = optimizer.grid_search(
             confirmation_thresholds=args.confirmation_thresholds,
             continuation_thresholds=args.continuation_thresholds,
             reversal_thresholds=args.reversal_thresholds,
@@ -208,128 +217,134 @@ def main():
         )
         
         # Generate optimization report
-        report_path = args.output if args.output else None
-        optimizer.generate_report(results, output_path=report_path)
+        # Determine optimization report path - could be different from analysis report path
+        opt_report_dir = Path(args.output).parent if '{timestamp}' in args.output else Path('reports')
+        opt_report_dir.mkdir(parents=True, exist_ok=True)
+        opt_report_filename = f"optimization_report_{timestamp}.md"
+        # If args.output is a specific file not containing {timestamp}, use it for optimization report
+        # This logic might need refinement based on desired behavior for --output with --optimize
+        optimization_report_path = opt_report_dir / opt_report_filename
+        if args.output and '{timestamp}' not in args.output and not Path(args.output).is_dir():
+             optimization_report_path = args.output # User specified a fixed output file
+
+        optimizer.generate_report(opt_results, output_path=str(optimization_report_path))
         
-        # Save raw results
-        if args.output:
-            output_dir = os.path.dirname(args.output)
-            results_path = os.path.join(output_dir, 'optimization_results.json')
-        else:
-            results_path = None
-        optimizer.save_results(results, output_file=results_path)
+        # Save raw optimization results
+        raw_opt_results_filename = f"optimization_results_{timestamp}.json"
+        raw_optimization_results_path = opt_report_dir / raw_opt_results_filename
+        optimizer.save_results(opt_results, output_file=str(raw_optimization_results_path))
         
-        logger.info("Parameter optimization completed")
+        logger.info(f"Parameter optimization completed. Report: {optimization_report_path}, Results: {raw_optimization_results_path}")
         
-        # Use best parameters for analysis if requested
+        # If --analyze is also specified, run analysis using the best parameters found
         if args.analyze:
-            logger.info("Using best parameters for analysis")
-            best_params = results['best_params']
+            logger.info("Using best parameters for analysis after optimization.")
+            best_params = opt_results['best_params'] # This is a flat dict
             
-            # Update analyzer parameters
-            analysis_params = {
-                'break_detection': {
-                    'confirmation_threshold': best_params['confirmation_threshold']
-                },
-                'analysis': {
-                    'continuation_threshold': best_params['continuation_threshold'],
-                    'reversal_threshold': best_params['reversal_threshold'],
-                    'window_hours': best_params['window_hours']
-                }
-            }
-            
-            # Run analysis with best parameters
-            results_df = analyzer.analyze_key_level_breaks(
+            results_df_for_analysis_output = analyzer.analyze_key_level_breaks(
                 start_date=args.start_date,
                 end_date=args.end_date,
-                **analysis_params
+                **best_params # Pass flat best_params dict
             )
             
-            # Generate report
-            if args.output:
-                analyzer.generate_report(results_df, output_path=args.output)
-            else:
-                analyzer.generate_report(results_df)
+            # Generate analysis report (this will use the main output_path)
+            if results_df_for_analysis_output is not None and not results_df_for_analysis_output.empty:
+                logger.info(f"Generating analysis report (from optimized params) to {output_path}")
+                analyzer.generate_report(results_df_for_analysis_output, output_path=output_path)
     
-    # If analysis is requested, run analysis
-    elif args.analyze:
-        # Prepare analysis parameters
-        analysis_params = {}
+    # Standalone analysis or default action (if not optimizing, or if optimizing but --analyze was not also passed to trigger post-opt analysis)
+    # This block runs if:
+    # 1. --analyze is true AND --optimize is false (standalone analysis)
+    # 2. Neither --optimize nor --analyze is true (default action is analysis)
+    elif args.analyze or (not args.optimize and not args.analyze):
+        action_type = "Standalone" if args.analyze else "Default"
+        logger.info(f"Running {action_type} analysis.")
         
+        # Prepare analysis parameters from CLI or config
+        standalone_analysis_params = {}
         if args.confirmation_threshold is not None:
-            analysis_params['confirmation_threshold'] = args.confirmation_threshold
-        
+            standalone_analysis_params['confirmation_threshold'] = args.confirmation_threshold
         if args.continuation_threshold is not None:
-            analysis_params['continuation_threshold'] = args.continuation_threshold
-        
+            standalone_analysis_params['continuation_threshold'] = args.continuation_threshold
         if args.reversal_threshold is not None:
-            analysis_params['reversal_threshold'] = args.reversal_threshold
-        
+            standalone_analysis_params['reversal_threshold'] = args.reversal_threshold
         if args.window_hours is not None:
-            analysis_params['window_hours'] = args.window_hours
+            standalone_analysis_params['window_hours'] = args.window_hours
         
         # Run analysis
-        logger.info("Running analysis...")
-        results = analyzer.analyze_key_level_breaks(
+        results_df_for_analysis_output = analyzer.analyze_key_level_breaks(
             start_date=args.start_date,
             end_date=args.end_date,
-            **analysis_params
+            **standalone_analysis_params
         )
         
-        # Generate and save report
-        logger.info(f"Generating report and saving to {output_path}")
-        report = analyzer.generate_report(results, output_path=output_path)
-        
+        # Generate and save analysis report
+        if results_df_for_analysis_output is not None and not results_df_for_analysis_output.empty:
+            logger.info(f"Generating report for {action_type} analysis and saving to {output_path}")
+            analyzer.generate_report(results_df_for_analysis_output, output_path=output_path)
+
+    # Common output handling for any analysis run that produced results_df_for_analysis_output
+    csv_path_final = None # To store actual path for summary
+    charts_dir_final = None # To store actual path for summary
+
+    if results_df_for_analysis_output is not None and not results_df_for_analysis_output.empty:
         # Save results to CSV if requested
-        csv_path = None
         if args.csv_output:
-            csv_path = args.csv_output.replace('{timestamp}', timestamp)
-            logger.info(f"Saving results to CSV: {csv_path}")
-            os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-            results.to_csv(csv_path, index=False)
+            csv_path_final = args.csv_output.replace('{timestamp}', timestamp)
+            logger.info(f"Saving results to CSV: {csv_path_final}")
+            # Ensure directory exists
+            Path(csv_path_final).parent.mkdir(parents=True, exist_ok=True)
+            results_df_for_analysis_output.to_csv(csv_path_final, index=False)
         
         # Generate visualization charts if requested
-        if args.charts and not results.empty:
-            charts_dir = args.charts_dir.replace('{timestamp}', timestamp)
-            logger.info(f"Generating charts in {charts_dir}")
-            charts = generate_report_charts(results, charts_dir)
+        if args.charts:
+            charts_dir_final = args.charts_dir.replace('{timestamp}', timestamp)
+            logger.info(f"Generating charts in {charts_dir_final}")
+            # Ensure directory exists
+            Path(charts_dir_final).mkdir(parents=True, exist_ok=True)
+            charts = generate_report_charts(results_df_for_analysis_output, charts_dir_final)
             logger.info(f"Generated {len(charts)} charts")
         
-        logger.info("Analysis complete")
+        logger.info("Analysis processing complete.")
         
         # Print summary to console
         print("\nAnalysis Summary:")
-        print(f"Total breaks analyzed: {len(results)}")
+        print(f"Total breaks analyzed: {len(results_df_for_analysis_output)}")
         
-        if not results.empty:
-            high_breaks = len(results[results['break_type'] == 'high'])
-            low_breaks = len(results[results['break_type'] == 'low'])
+        high_breaks = len(results_df_for_analysis_output[results_df_for_analysis_output['break_type'] == 'high'])
+        low_breaks = len(results_df_for_analysis_output[results_df_for_analysis_output['break_type'] == 'low'])
             
-            print(f"High breaks: {high_breaks}")
-            print(f"Low breaks: {low_breaks}")
+        print(f"High breaks: {high_breaks}")
+        print(f"Low breaks: {low_breaks}")
             
-            # Get outcome counts
-            continuation_count = len(results[results['outcome'] == 'continuation'])
-            reversal_count = len(results[results['outcome'] == 'reversal'])
+        # Get outcome counts
+        continuation_count = len(results_df_for_analysis_output[results_df_for_analysis_output['outcome'] == 'continuation'])
+        reversal_count = len(results_df_for_analysis_output[results_df_for_analysis_output['outcome'] == 'reversal'])
+        cont_then_rev = len(results_df_for_analysis_output[results_df_for_analysis_output['outcome'] == 'continuation_then_reversal'])
+        rev_then_cont = len(results_df_for_analysis_output[results_df_for_analysis_output['outcome'] == 'reversal_then_continuation'])
+        sideways_count = len(results_df_for_analysis_output[results_df_for_analysis_output['outcome'] == 'sideways'])
             
-            cont_then_rev = len(results[results['outcome'] == 'continuation_then_reversal'])
-            rev_then_cont = len(results[results['outcome'] == 'reversal_then_continuation'])
+        print(f"Continuation outcomes: {continuation_count} ({continuation_count/len(results_df_for_analysis_output)*100:.1f}%)")
+        print(f"Reversal outcomes: {reversal_count} ({reversal_count/len(results_df_for_analysis_output)*100:.1f}%)")
+        print(f"Continuation then reversal: {cont_then_rev} ({cont_then_rev/len(results_df_for_analysis_output)*100:.1f}%)")
+        print(f"Reversal then continuation: {rev_then_cont} ({rev_then_cont/len(results_df_for_analysis_output)*100:.1f}%)")
+        print(f"Sideways: {sideways_count} ({sideways_count/len(results_df_for_analysis_output)*100:.1f}%)")
             
-            sideways_count = len(results[results['outcome'] == 'sideways'])
+        print(f"\nFull analysis report saved to: {output_path}")
             
-            print(f"Continuation outcomes: {continuation_count} ({continuation_count/len(results)*100:.1f}%)")
-            print(f"Reversal outcomes: {reversal_count} ({reversal_count/len(results)*100:.1f}%)")
-            print(f"Continuation then reversal: {cont_then_rev} ({cont_then_rev/len(results)*100:.1f}%)")
-            print(f"Reversal then continuation: {rev_then_cont} ({rev_then_cont/len(results)*100:.1f}%)")
-            print(f"Sideways: {sideways_count} ({sideways_count/len(results)*100:.1f}%)")
+        if csv_path_final:
+            print(f"CSV results saved to: {csv_path_final}")
             
-            print(f"\nFull report saved to: {output_path}")
-            
-            if csv_path:
-                print(f"CSV results saved to: {csv_path}")
-            
-            if args.charts:
-                print(f"Charts saved to: {charts_dir}")
+        if args.charts and charts_dir_final:
+            print(f"Charts saved to: {charts_dir_final}")
+
+    elif (args.optimize and args.analyze) or args.analyze or (not args.optimize and not args.analyze):
+        # This case means an analysis was attempted (either post-optimization, standalone, or default) but yielded no results.
+        logger.info("Analysis ran but produced no break data to summarize or output.")
+    else:
+        # This case means only --optimize was run, without --analyze, so no analysis results to summarize here.
+        # The optimization report has already been generated.
+        logger.info("Optimization finished. No standard analysis was run in this session.")
 
 if __name__ == "__main__":
     main() 

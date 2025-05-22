@@ -67,9 +67,9 @@ class ParameterOptimizer:
         # For each break type, calculate metrics
         metrics = {}
         
-        for break_type in ['high_break', 'low_break']:
+        for break_type_key in ['high', 'low']: # Changed from ['high_break', 'low_break']
             # Filter results for this break type
-            type_df = results_df[results_df['break_type'] == break_type]
+            type_df = results_df[results_df['break_type'] == break_type_key] # Use break_type_key
             
             if type_df.empty:
                 continue
@@ -77,7 +77,7 @@ class ParameterOptimizer:
             # For high breaks, we assume reversal strategy (sell on break)
             # For low breaks, we assume reversal strategy (buy on break)
             
-            if break_type == 'high_break':
+            if break_type_key == 'high': # Changed from 'high_break'
                 # For high breaks (sell on break), profit comes from reversal
                 wins = type_df[type_df['outcome'].isin(['reversal', 'reversal_then_continuation'])]
                 losses = type_df[type_df['outcome'].isin(['continuation', 'continuation_then_reversal'])]
@@ -86,7 +86,7 @@ class ParameterOptimizer:
                 rewards = wins['max_reversal_pct']
                 # Define risk as max continuation percentage
                 risks = losses['max_continuation_pct']
-            else:
+            else: # low break
                 # For low breaks (buy on break), profit comes from reversal
                 wins = type_df[type_df['outcome'].isin(['reversal', 'reversal_then_continuation'])]
                 losses = type_df[type_df['outcome'].isin(['continuation', 'continuation_then_reversal'])]
@@ -121,7 +121,7 @@ class ParameterOptimizer:
             else:
                 sharpe_ratio = 0
                 
-            metrics[break_type] = {
+            metrics[break_type_key] = { # Use break_type_key
                 "win_rate": win_rate,
                 "profit_factor": profit_factor,
                 "expectancy": expectancy,
@@ -215,10 +215,16 @@ class ParameterOptimizer:
                         f"Elapsed: {elapsed:.1f}s, Remaining: {remaining:.1f}s")
             
             # Run analysis with current parameters
+            flat_analysis_params = {
+                'confirmation_threshold': confirmation_threshold,
+                'continuation_threshold': continuation_threshold,
+                'reversal_threshold': reversal_threshold,
+                'window_hours': window_hour
+            }
             results_df = self.analyzer.analyze_key_level_breaks(
                 start_date=start_date,
                 end_date=end_date,
-                **analysis_params
+                **flat_analysis_params # Pass flat params directly
             )
             
             # Calculate performance metrics
